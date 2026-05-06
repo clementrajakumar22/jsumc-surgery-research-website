@@ -402,6 +402,23 @@
         onUpdate(updatedSpec);
         setModal(null);
       };
+
+      // Save completed project: update state and persist changes. Uses
+      // nextId helper to generate a unique ID if this is a new entry.
+      const saveCompleted = data => {
+        const updatedCompleted = modal?.id
+          ? specialty.completedProjects.map(p => p.id === modal.id ? { ...p, ...data } : p)
+          : [...(specialty.completedProjects || []), { id: nextId(specialty.completedProjects || []), ...data }];
+        const updatedSpec = { ...specialty, completedProjects: updatedCompleted };
+        onUpdate(updatedSpec);
+        setModal(null);
+      };
+      // Delete completed project.
+      const deleteCompleted = id => {
+        const updatedSpec = { ...specialty, completedProjects: (specialty.completedProjects || []).filter(p => p.id !== id) };
+        onUpdate(updatedSpec);
+        setModal(null);
+      };
       return (
         <>
           <div style={S.card}>
@@ -456,6 +473,21 @@
                     </div>
                   );
                 })}
+                {/* Completed Projects */}
+                <div style={{ ...S.sectionHead, marginTop: 8 }}>
+                  <span style={S.sectionHeadLabel}>✅ Completed Projects ({(specialty.completedProjects || []).length})</span>
+                  <button style={S.addBtn} onClick={() => setModal({ type: "completed" })}>+ Add</button>
+                </div>
+                {(!specialty.completedProjects || specialty.completedProjects.length === 0) && <div style={{ color: "#9ca3af", fontSize: 12, fontFamily: "Arial" }}>No completed projects yet.</div>}
+                {(specialty.completedProjects || []).map(p => (
+                  <div key={p.id} style={S.projectRow}>
+                    <button style={S.editBtn} title="Edit" onClick={() => setModal({ type: "completed", id: p.id, ...p })}>✏️</button>
+                    <div style={S.projectName}>{p.name}</div>
+                    {p.lead && <div style={S.projectMeta}><span style={S.metaLabel}>Resident Lead:</span> {p.lead}</div>}
+                    {p.attending && <div style={S.projectMeta}><span style={S.metaLabel}>Attending:</span> {p.attending}</div>}
+                    {p.paperUrl && <div style={S.projectMeta}><span style={S.metaLabel}>Paper:</span> <a href={p.paperUrl} target="_blank" rel="noopener noreferrer" style={{ color: "#2563eb", textDecoration: "underline", fontSize: 12 }}>View PDF</a></div>}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -476,6 +508,16 @@
                 initial={modal.id ? { name: modal.name, abstractDeadline: modal.abstractDeadline, dates: modal.dates, location: modal.location, submissionUrl: modal.submissionUrl || "" } : null}
                 onSave={saveConference}
                 onDelete={modal.id ? () => deleteConference(modal.id) : null}
+                onClose={() => setModal(null)}
+              />
+            </Modal>
+          )}
+          {modal?.type === "completed" && (
+            <Modal title={modal.id ? "Edit Completed Project" : "Add Completed Project"} onClose={() => setModal(null)}>
+              <CompletedProjectForm
+                initial={modal.id ? { name: modal.name, lead: modal.lead || "", attending: modal.attending || "", paperUrl: modal.paperUrl || "" } : null}
+                onSave={saveCompleted}
+                onDelete={modal.id ? () => deleteCompleted(modal.id) : null}
                 onClose={() => setModal(null)}
               />
             </Modal>
@@ -504,11 +546,18 @@
           if (snapshot.empty) {
             initialSpecialties.forEach(spec => {
               const { id, ...docData } = spec;
-              db.collection('specialties').doc(id).set(docData);
+              // ensure completedProjects exists on seed
+              const payload = { ...docData, completedProjects: docData.completedProjects ?? [] };
+              db.collection('specialties').doc(id).set(payload);
             });
-            setSpecialties(initialSpecialties);
+            // Seed local state too
+            const seeded = initialSpecialties.map(spec => ({ ...spec, completedProjects: spec.completedProjects ?? [] }));
+            setSpecialties(seeded);
           } else {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const data = snapshot.docs.map(doc => {
+              const d = doc.data();
+              return { id: doc.id, ...d, completedProjects: d.completedProjects ?? [] };
+            });
             setSpecialties(data);
           }
         });
@@ -539,6 +588,7 @@
 
       const totalProjects = specialties.reduce((a, s) => a + (s.projects?.length || 0), 0);
       const totalConfs = specialties.reduce((a, s) => a + (s.conferences?.length || 0), 0);
+      const totalCompleted = specialties.reduce((a, s) => a + (s.completedProjects?.length || 0), 0);
 
       return (
         <div style={S.page}>
@@ -553,6 +603,7 @@
               <div style={{ ...S.headerBadge, color: "#c8a84b" }}>{specialties.length} Subspecialties</div>
               <div style={{ ...S.headerBadge, color: "#a8d8c8" }}>{totalProjects} Active Projects</div>
               <div style={{ ...S.headerBadge, color: "#bfdbfe" }}>{totalConfs} Conferences</div>
+              <div style={{ ...S.headerBadge, color: "#34d399" }}>{totalCompleted} Completed Projects</div>
             </div>
           </div>
           {/* Body */}
@@ -577,6 +628,33 @@
             </div>
           </div>
         </div>
+      );
+    }
+
+    // Form for creating or editing a completed project. Completed projects
+    // represent research efforts that have been finalized. Users can
+    // optionally attach a link to a PDF or external paper. If editing an
+    // existing completed project, the `initial` prop will contain the
+    // existing values; otherwise defaults are used.
+    function CompletedProjectForm({ initial, onSave, onDelete, onClose }) {
+      const [form, setForm] = useState(initial || { name: "", lead: "", attending: "", paperUrl: "" });
+      const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+      return (
+        <>
+          <label style={S.label}>Project Name</label>
+          <input style={S.input} value={form.name} onChange={e => set("name", e.target.value)} placeholder="e.g. Completed Study on Robotic Outcomes" />
+          <label style={S.label}>Resident / Project Lead</label>
+          <input style={S.input} value={form.lead} onChange={e => set("lead", e.target.value)} placeholder="e.g. Dr. A. Smith" />
+          <label style={S.label}>Attending Lead</label>
+          <input style={S.input} value={form.attending} onChange={e => set("attending", e.target.value)} placeholder="e.g. Dr. B. Jones" />
+          <label style={S.label}>PDF or Paper URL</label>
+          <input style={S.input} value={form.paperUrl} onChange={e => set("paperUrl", e.target.value)} placeholder="https://example.com/my-paper.pdf" type="url" />
+          <div style={S.modalActions}>
+            {onDelete && <button style={S.deleteBtn} onClick={onDelete}>Delete</button>}
+            <button style={S.cancelBtn} onClick={onClose}>Cancel</button>
+            <button style={S.saveBtn} onClick={() => { if (form.name.trim()) onSave(form); }}>Save</button>
+          </div>
+        </>
       );
     }
 
