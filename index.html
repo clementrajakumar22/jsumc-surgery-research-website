@@ -243,6 +243,15 @@
           { id: 5, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
         ],
       },
+      {
+        id: "pediatric",
+        name: "Pediatric Surgery",
+        icon: "🧒",
+        color: "#F39C12",
+        projects: [],
+        conferences: [],
+        completedProjects: []
+      },
     ];
 
     // ── UI Styles ─────────────────────────────────────────────────────────
@@ -559,6 +568,21 @@
               return { id: doc.id, ...d, completedProjects: d.completedProjects ?? [] };
             });
             setSpecialties(data);
+          }
+        });
+        // Ensure Pediatric Surgery specialty exists in Firestore. If the document
+        // with ID "pediatric" is missing, create it with default values. This
+        // runs once on mount and will not overwrite existing data.
+        db.collection('specialties').doc('pediatric').get().then(docSnap => {
+          if (!docSnap.exists) {
+            db.collection('specialties').doc('pediatric').set({
+              name: 'Pediatric Surgery',
+              icon: '🧒',
+              color: '#F39C12',
+              projects: [],
+              conferences: [],
+              completedProjects: []
+            });
           }
         });
         return () => unsubscribe();
