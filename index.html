@@ -52,6 +52,199 @@
     const appFirebase = firebase.apps?.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // ── Default data ────────────────────────────────────────────────────────
+    // When the Firestore database is empty (i.e. no specialties have been
+    // created yet), the app will seed the database with this initial data
+    // derived from the original HTML file provided. Each object represents a
+    // surgical subspecialty with its projects and conference information. On
+    // first load, if the `specialties` collection has no documents, these
+    // objects will be written to Firestore and also used to initialize
+    // local state. Subsequent loads will pull data exclusively from
+    // Firestore.
+    const initialSpecialties = [
+      {
+        id: "colorectal",
+        name: "Colorectal Surgery",
+        icon: "🫁",
+        color: "#C0392B",
+        projects: [
+          { id: 1, name: "Laparoscopic vs Robotic Colectomy Outcomes", lead: "Dr. A. Rivera", attending: "Dr. M. Patel" },
+          { id: 2, name: "Enhanced Recovery Protocol in IBD Resections", lead: "Dr. T. Chen", attending: "Dr. S. Wong" },
+          { id: 3, name: "Colorectal Cancer Screening Disparities in NJ", lead: "Dr. L. Kim", attending: "Dr. J. Alvarez" },
+        ],
+        conferences: [
+          { id: 1, name: "ASCRS Annual Scientific Meeting 2027", abstractDeadline: "Oct 14, 2026", dates: "May 8–11, 2027", location: "Tampa, FL (est.)", submissionUrl: "https://ascrs.org/annual-scientific-meeting" },
+          { id: 2, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 3, name: "SAGES Annual Meeting 2027", abstractDeadline: "Oct 15, 2026", dates: "Apr 2027", location: "TBD", submissionUrl: "https://www.sages.org/meetings/annual-meeting/abstract-submission/" },
+          { id: 4, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 5, name: "Society of Black Academic Surgeons 2026", abstractDeadline: "Apr 2026 (TBD)", dates: "Oct 15–19, 2026", location: "Lexington, KY", submissionUrl: "https://www.sbas.net/annual-meeting" },
+        ],
+      },
+      {
+        id: "surgical-oncology",
+        name: "Surgical Oncology",
+        icon: "🔬",
+        color: "#8E44AD",
+        projects: [
+          { id: 1, name: "Sentinel Lymph Node Biopsy Accuracy in Melanoma", lead: "Dr. B. Nguyen", attending: "Dr. C. Fields" },
+          { id: 2, name: "Neoadjuvant Therapy Response in Gastric Cancer", lead: "Dr. E. Santos", attending: "Dr. R. Kapoor" },
+          { id: 3, name: "HIPEC Outcomes in Peritoneal Carcinomatosis", lead: "Dr. M. Johnson", attending: "Dr. A. Shah" },
+        ],
+        conferences: [
+          { id: 1, name: "Society of Surgical Oncology Annual Meeting 2027", abstractDeadline: "Sep 15, 2026", dates: "Mar 2027", location: "TBD", submissionUrl: "https://www.surgonc.org/education-meetings/annual-cancer-symposium/abstract-submission/" },
+          { id: 2, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 3, name: "American Surgical Association Annual Meeting 2027", abstractDeadline: "Nov 18, 2026", dates: "Apr 2027", location: "TBD", submissionUrl: "https://americansurgical.org/page/AbstractSubmission" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 5, name: "ASCO Annual Meeting 2027", abstractDeadline: "Jan 2027 (TBD)", dates: "May–Jun 2027", location: "TBD", submissionUrl: "https://www.asco.org/meetings-education/asco-meetings/asco-annual-meeting/abstract-submissions" },
+        ],
+      },
+      {
+        id: "minimally-invasive",
+        name: "Minimally Invasive Surgery",
+        icon: "🤖",
+        color: "#2980B9",
+        projects: [
+          { id: 1, name: "Single-Port Robotics vs Multi-Port Laparoscopy", lead: "Dr. P. Morales", attending: "Dr. K. Yuen" },
+          { id: 2, name: "Natural Orifice Transluminal Procedures: NJ Registry", lead: "Dr. H. Obi", attending: "Dr. V. Nair" },
+          { id: 3, name: "Robotic Inguinal Hernia: Learning Curve Analysis", lead: "Dr. S. Park", attending: "Dr. L. Diaz" },
+        ],
+        conferences: [
+          { id: 1, name: "SAGES Annual Meeting 2027", abstractDeadline: "Oct 15, 2026", dates: "Apr 2027", location: "TBD", submissionUrl: "https://www.sages.org/meetings/annual-meeting/abstract-submission/" },
+          { id: 2, name: "EAES International Congress 2026", abstractDeadline: "Feb 2026 (TBD)", dates: "Jun 17–20, 2026", location: "Vienna, Austria", submissionUrl: "https://eaes.eu/annual-congress/" },
+          { id: 3, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+        ],
+      },
+      {
+        id: "trauma",
+        name: "Trauma & Acute Care Surgery",
+        icon: "🚑",
+        color: "#E74C3C",
+        projects: [
+          { id: 1, name: "Damage Control Resuscitation Protocol Analysis", lead: "Dr. F. Martinez", attending: "Dr. G. Brown" },
+          { id: 2, name: "Massive Transfusion Protocol Compliance Audit", lead: "Dr. Z. Ali", attending: "Dr. W. Park" },
+          { id: 3, name: "Non-operative Management of Solid Organ Injuries", lead: "Dr. C. Ortiz", attending: "Dr. D. Thomas" },
+          { id: 4, name: "Emergency Laparotomy Bundle Outcomes", lead: "Dr. R. Singh", attending: "Dr. N. Brooks" },
+        ],
+        conferences: [
+          { id: 1, name: "AAST Annual Scientific Meeting 2026", abstractDeadline: "Mar 2026 (TBD)", dates: "Sep 9–13, 2026", location: "Denver, CO", submissionUrl: "https://www.aast.org/annual-meeting/abstract-submission" },
+          { id: 2, name: "Western Trauma Association Annual Meeting 2027", abstractDeadline: "Aug 1, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://www.westerntrauma.org/annual-meeting/" },
+          { id: 3, name: "Eastern Association for Surgery of Trauma (EAST) 2027", abstractDeadline: "Aug 15, 2026", dates: "Jan 2027", location: "TBD", submissionUrl: "https://www.east.org/education-career-development/conferences-meetings/annual-scientific-assembly/abstract-submission" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 5, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+        ],
+      },
+      {
+        id: "hepatobiliary",
+        name: "Hepatobiliary & Pancreatic Surgery",
+        icon: "🫀",
+        color: "#D35400",
+        projects: [
+          { id: 1, name: "Laparoscopic Liver Resection: Blood Loss Predictors", lead: "Dr. I. Chen", attending: "Dr. O. Reed" },
+          { id: 2, name: "Whipple Outcomes in Elderly Patients (>75)", lead: "Dr. A. Patel", attending: "Dr. Q. Liu" },
+          { id: 3, name: "ERCP vs Surgical Drainage in Chronic Pancreatitis", lead: "Dr. J. Williams", attending: "Dr. S. Moore" },
+        ],
+        conferences: [
+          { id: 1, name: "AHPBA Annual Meeting 2027", abstractDeadline: "Oct 2026 (TBD)", dates: "Mar–Apr 2027", location: "Miami Beach, FL (est.)", submissionUrl: "https://www.ahpba.org/annual-meeting/" },
+          { id: 2, name: "IHPBA World Congress 2026", abstractDeadline: "Dec 2025 (TBD)", dates: "Jul 7–10, 2026", location: "Cape Town, SA", submissionUrl: "https://www.ihpba.org/congress/" },
+          { id: 3, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 5, name: "Pancreas Club Annual Meeting 2027", abstractDeadline: "Jan 2027 (TBD)", dates: "May–Jun 2027", location: "TBD", submissionUrl: "https://www.pancreasclub.com/annual-meeting" },
+        ],
+      },
+      {
+        id: "vascular",
+        name: "Vascular Surgery",
+        icon: "🫸",
+        color: "#16A085",
+        projects: [
+          { id: 1, name: "EVAR vs Open Repair Long-term Outcomes", lead: "Dr. T. Jackson", attending: "Dr. U. Green" },
+          { id: 2, name: "Carotid Artery Stenosis: CEA vs CAS Registry", lead: "Dr. Y. White", attending: "Dr. B. Harris" },
+          { id: 3, name: "Diabetic Limb Salvage: Bypass vs Endovascular", lead: "Dr. X. Clark", attending: "Dr. M. Lewis" },
+        ],
+        conferences: [
+          { id: 1, name: "SVS Vascular Annual Meeting 2027", abstractDeadline: "Jan 2027 (TBD)", dates: "Jun 2027", location: "TBD", submissionUrl: "https://vascular.org/meetings-and-events/vascular-annual-meeting/abstract-submission" },
+          { id: 2, name: "Midwestern Vascular Surgical Society 2026", abstractDeadline: "May 2026 (TBD)", dates: "Sep 10–13, 2026", location: "Chicago, IL", submissionUrl: "https://www.mvss.org/annual-meeting" },
+          { id: 3, name: "Society for Clinical Vascular Surgery (SCVS) 2027", abstractDeadline: "Oct 1, 2026", dates: "Mar 2027", location: "TBD", submissionUrl: "https://www.scvs.org/annual-symposium/abstract-submission/" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 5, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 6, name: "Southern Association for Vascular Surgery 2027", abstractDeadline: "Oct 2026 (TBD)", dates: "Jan 2027", location: "TBD", submissionUrl: "https://www.savs.org/annual-meeting" },
+        ],
+      },
+      {
+        id: "thoracic",
+        name: "Thoracic Surgery",
+        icon: "🫁",
+        color: "#1ABC9C",
+        projects: [
+          { id: 1, name: "VATS Lobectomy Recovery Outcomes", lead: "Dr. P. Hall", attending: "Dr. Q. Young" },
+          { id: 2, name: "Esophageal Cancer Staging Accuracy: PET vs CT", lead: "Dr. R. King", attending: "Dr. S. Wright" },
+          { id: 3, name: "Robotic vs VATS Segmentectomy: Margin Analysis", lead: "Dr. T. Nguyen", attending: "Dr. U. Patel" },
+        ],
+        conferences: [
+          { id: 1, name: "Society of Thoracic Surgeons (STS) Annual Meeting 2027", abstractDeadline: "Aug 5, 2026", dates: "Jan–Feb 2027", location: "TBD", submissionUrl: "https://www.sts.org/meetings/sts-annual-meeting/abstract-submission" },
+          { id: 2, name: "General Thoracic Surgical Club (GTSC) 2027", abstractDeadline: "Nov 1, 2026", dates: "Mar 2027", location: "TBD", submissionUrl: "https://www.gtsc.org/annual-meeting" },
+          { id: 3, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 4, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 5, name: "American Association for Thoracic Surgery (AATS) 2027", abstractDeadline: "Oct 2026 (TBD)", dates: "Apr–May 2027", location: "TBD", submissionUrl: "https://www.aats.org/aatsimis/AATS/Annual_Meeting/Abstract_Submission/AATS/Annual_Meeting/Abstract_Submission.aspx" },
+        ],
+      },
+      {
+        id: "breast",
+        name: "Breast Surgery",
+        icon: "🎗️",
+        color: "#E91E8C",
+        projects: [
+          { id: 1, name: "Oncoplastic Reconstruction Outcomes vs Standard Lumpectomy", lead: "Dr. L. Scott", attending: "Dr. N. Adams" },
+          { id: 2, name: "Contralateral Prophylactic Mastectomy Trends in BRCA+", lead: "Dr. M. Baker", attending: "Dr. O. Nelson" },
+          { id: 3, name: "Sentinel Node Biopsy Omission in Early Breast Cancer", lead: "Dr. K. Carter", attending: "Dr. P. Mitchell" },
+        ],
+        conferences: [
+          { id: 1, name: "American Society of Breast Surgeons (ASBrS) Annual Meeting 2027", abstractDeadline: "Nov 2026 (TBD)", dates: "Apr–May 2027", location: "TBD", submissionUrl: "https://www.breastsurgeons.org/annual-meeting/abstract-submission/" },
+          { id: 2, name: "San Antonio Breast Cancer Symposium 2026", abstractDeadline: "Jun 15, 2026", dates: "Dec 8–11, 2026", location: "San Antonio, TX", submissionUrl: "https://www.sabcs.org/Abstract-Submission" },
+          { id: 3, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 4, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+          { id: 5, name: "ASCO Annual Meeting 2027", abstractDeadline: "Jan 2027 (TBD)", dates: "May–Jun 2027", location: "TBD", submissionUrl: "https://www.asco.org/meetings-education/asco-meetings/asco-annual-meeting/abstract-submissions" },
+        ],
+      },
+      {
+        id: "endocrine",
+        name: "Endocrine Surgery",
+        icon: "⚗️",
+        color: "#F39C12",
+        projects: [
+          { id: 1, name: "Robotic Thyroidectomy vs Open: Scar Satisfaction Study", lead: "Dr. A. Perez", attending: "Dr. B. Roberts" },
+          { id: 2, name: "Parathyroid Hormone Monitoring Intraoperatively", lead: "Dr. C. Turner", attending: "Dr. D. Phillips" },
+          { id: 3, name: "Adrenalectomy Approaches: Retroperitoneal vs Transperitoneal", lead: "Dr. E. Campbell", attending: "Dr. F. Parker" },
+        ],
+        conferences: [
+          { id: 1, name: "AAES Annual Meeting 2027", abstractDeadline: "Feb 2027 (TBD)", dates: "Apr 18–20, 2027", location: "TBD", submissionUrl: "https://www.endocrinesurgery.org/annual-meeting/abstract-submission/" },
+          { id: 2, name: "American Thyroid Association Annual Meeting 2026", abstractDeadline: "May 2026 (TBD)", dates: "Nov 4–7, 2026", location: "Philadelphia, PA", submissionUrl: "https://www.thyroid.org/professionals/meetings/abstract-submission/" },
+          { id: 3, name: "Endocrine Society (ENDO) Annual Meeting 2026", abstractDeadline: "TBD", dates: "Jun 13–16, 2026", location: "Chicago, IL", submissionUrl: "https://www.endocrine.org/meetings-and-events/endo-annual-meeting/abstracts" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 5, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+        ],
+      },
+      {
+        id: "hernia",
+        name: "Hernia & Abdominal Wall Surgery",
+        icon: "🔧",
+        color: "#7F8C8D",
+        projects: [
+          { id: 1, name: "Complex Abdominal Wall Reconstruction: Biologic vs Synthetic Mesh", lead: "Dr. G. Evans", attending: "Dr. H. Edwards" },
+          { id: 2, name: "Laparoscopic vs Robotic IPOM for Ventral Hernia", lead: "Dr. I. Collins", attending: "Dr. J. Stewart" },
+          { id: 3, name: "Frailty Index as Predictor of Hernia Recurrence", lead: "Dr. K. Young", attending: "Dr. L. Morris" },
+        ],
+        conferences: [
+          { id: 1, name: "Americas Hernia Society (AHS) Annual Meeting 2026", abstractDeadline: "Jul 1, 2026", dates: "Oct 2026", location: "TBD", submissionUrl: "https://www.americasherniasociety.org/annual-meeting/abstract-submission" },
+          { id: 2, name: "SAGES Annual Meeting 2027", abstractDeadline: "Oct 15, 2026", dates: "Apr 2027", location: "TBD", submissionUrl: "https://www.sages.org/meetings/annual-meeting/abstract-submission/" },
+          { id: 3, name: "European Hernia Society Congress 2027", abstractDeadline: "Jan 31, 2027", dates: "May 2027", location: "TBD", submissionUrl: "https://www.europeanherniasociety.eu/congress/abstract-submission/" },
+          { id: 4, name: "ACS Clinical Congress 2026", abstractDeadline: "May 31, 2026", dates: "Sep 26–29, 2026", location: "Washington, DC", submissionUrl: "https://www.facs.org/for-medical-professionals/conferences-and-meetings/clinical-congress/abstracts/" },
+          { id: 5, name: "Academic Surgical Congress 2027", abstractDeadline: "Jun 16, 2026", dates: "Feb 2027", location: "TBD", submissionUrl: "https://academicsurgicalcongress.us/" },
+        ],
+      },
+    ];
+
     // ── UI Styles ─────────────────────────────────────────────────────────
     // Centralized style definitions used throughout the UI. Keeping styles in
     // one place makes it easy to tweak the design without hunting through
@@ -303,8 +496,21 @@
       // name, icon, color, projects (array) and conferences (array).
       useEffect(() => {
         const unsubscribe = db.collection('specialties').onSnapshot(snapshot => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setSpecialties(data);
+          // If the snapshot has no documents, seed Firestore with the
+          // initial specialties defined above. This only runs once on
+          // first load when the database is empty. After seeding, we
+          // update local state with the same data. If there are existing
+          // documents, we simply map them to our local state.
+          if (snapshot.empty) {
+            initialSpecialties.forEach(spec => {
+              const { id, ...docData } = spec;
+              db.collection('specialties').doc(id).set(docData);
+            });
+            setSpecialties(initialSpecialties);
+          } else {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setSpecialties(data);
+          }
         });
         return () => unsubscribe();
       }, []);
